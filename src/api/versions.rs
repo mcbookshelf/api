@@ -13,7 +13,7 @@ use tokio::{
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Version {
     pub version: String,
-    pub game_versions: Vec<String>,
+    pub minecraft_versions: Vec<String>,
     pub manifest: String,
 }
 

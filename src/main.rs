@@ -10,7 +10,7 @@ mod manifest;
 #[tokio::main]
 async fn main() {
     let app = Router::new()
-        .route("/version", get(versions))
+        .route("/versions", get(versions))
         .route("/version/:id", get(manifest))
         .route("/download", get(download));
 
