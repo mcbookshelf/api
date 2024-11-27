@@ -41,7 +41,7 @@ async fn fetch_versions_from_disk() -> Result<Vec<Version>> {
 
 async fn fetch_versions_from_github() -> Result<Vec<Version>> {
     let url =
-        "https://raw.githubusercontent.com/Gunivers/Bookshelf/refs/heads/master/meta/versions.json";
+        "https://raw.githubusercontent.com/mcbookshelf/Bookshelf/refs/heads/master/meta/versions.json";
     let client = Client::new();
     let response = client
         .get(url)
