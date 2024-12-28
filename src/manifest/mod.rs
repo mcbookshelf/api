@@ -27,15 +27,17 @@ impl From<v1::Manifest> for v2::Manifest {
                 .into_iter()
                 .flat_map(move |datapack| {
                     datapack.modules.into_iter().map(move |module| v2::Module {
+                        slug: module.id.replace("bs.", "bookshelf-"),
                         id: module.id,
                         name: module.name,
-                        download: String::new(),
+                        icon: None,
+                        banner: None,
+                        readme: None,
                         documentation: module.documentation,
                         description: module.description,
-                        image: None,
                         kind: v2::ModuleKind::default(),
                         tags: match datapack.name.as_str() {
-                            "Bookshelf" => vec!["main".to_string()],
+                            "Bookshelf" => vec!["default".to_string()],
                             "Bookshelf Dev" => vec!["dev".to_string()],
                             _ => vec![],
                         },

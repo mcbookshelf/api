@@ -4,7 +4,6 @@ use api::versions::versions;
 use axum::{routing::get, Router};
 
 mod api;
-mod bundle;
 mod manifest;
 
 #[tokio::main]

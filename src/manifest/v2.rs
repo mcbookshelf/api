@@ -9,10 +9,12 @@ pub struct Manifest {
 pub struct Module {
     pub id: String,
     pub name: String,
-    pub download: String,
+    pub slug: String,
+    pub icon: Option<String>,
+    pub banner: Option<String>,
+    pub readme: Option<String>,
     pub documentation: String,
     pub description: String,
-    pub image: Option<String>,
     #[serde(default)]
     pub kind: ModuleKind,
     #[serde(default)]

@@ -7,14 +7,14 @@ description = "REST API for the Bookshelf project"
 license = "MPL-2.0"
 
 [dependencies]
-anyhow = "1.0.93"
-axum = "0.7.7"
+anyhow = "1.0.95"
+axum = "0.7.9"
 cached = { version = "0.54.0", features = ["async"] }
-reqwest = { version = "0.12.9", features = ["json"] }
-serde = { version = "1.0.215", features = ["derive"] }
-serde_json = "1.0.132"
-tokio = { version = "1.41.1", features = ["full"] }
-zip = "2.2.0"
+reqwest = { version = "0.12.11", features = ["json"] }
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.134"
+tokio = { version = "1.42.0", features = ["full"] }
+zip = "2.2.2"
 
 [profile.release]
 strip = true
