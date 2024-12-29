@@ -70,7 +70,7 @@ pub async fn download(Query(params): Query<QueryParams>) -> impl IntoResponse {
     }
 }
 
-#[cached(time = 60, result = true)]
+#[cached(size = 10, time = 60, result = true)]
 async fn create_bundle(modules: Vec<VersionedModule>) -> Result<Vec<u8>> {
     let (datapacks, resourcepacks): (Vec<VersionedModule>, Vec<VersionedModule>) = modules
         .into_iter()
@@ -128,7 +128,7 @@ async fn create_pack(modules: Vec<VersionedModule>) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
-#[cached(time = 60, result = true)]
+#[cached(size = 50, time = 60, result = true)]
 async fn fetch_module(
     module: Module,
     version: String,
