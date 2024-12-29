@@ -23,7 +23,7 @@ pub async fn versions() -> impl IntoResponse {
     }
 }
 
-#[cached(time = 3600, result = true)]
+#[cached(time = 600, result = true)]
 pub async fn fetch_versions() -> Result<Vec<Version>> {
     let disk_path = "data/versions.json";
     match fetch_versions_from_github().await {

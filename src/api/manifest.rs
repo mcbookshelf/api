@@ -23,23 +23,20 @@ pub async fn manifest(Path(version): Path<String>) -> impl IntoResponse {
 
 #[cached(time = 86400, result = true)]
 pub async fn fetch_manifest(version: String) -> Result<Option<ManifestKind>> {
+    let disk_path = format!("data/{}/manifest.json", version);
+    if StdPath::new(&disk_path).exists() {
+        return read_from_json_file(&disk_path).await.map(Some);
+    }
+
     let versions = fetch_versions().await.context("Failed to fetch versions")?;
 
     if let Some(version) = versions.into_iter().find(|entry| entry.version == version) {
-        let disk_path = format!("data/{}/manifest.json", version.version);
-
-        return match fetch_manifest_from_github(&version).await {
-            Ok(manifest) => {
-                if !StdPath::new(&disk_path).exists() {
-                    write_to_json_file(&disk_path, &manifest).await?;
-                }
-                Ok(Some(manifest))
-            },
-            Err(_) => read_from_json_file(&disk_path).await.map(Some),
-        };
+        let manifest = fetch_manifest_from_github(&version).await?;
+        write_to_json_file(&disk_path, &manifest).await?;
+        Ok(Some(manifest))
+    } else {
+        Ok(None)
     }
-
-    Ok(None)
 }
 
 async fn fetch_manifest_from_github(version: &Version) -> Result<ManifestKind> {

@@ -142,7 +142,7 @@ async fn fetch_module(
             Ok(bytes)
         },
         Err(_) => read_from_file(&disk_path).await
-            .context("Failed to fetch module from all sources"),
+            .context(format!("Failed to fetch module: {}", module.id)),
     }
 }
 
