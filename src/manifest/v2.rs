@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Manifest {
     pub modules: Vec<Module>,

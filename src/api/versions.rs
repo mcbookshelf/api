@@ -1,16 +1,12 @@
-use std::io;
-
-use anyhow::Context;
 use anyhow::Result;
-use axum::{http::StatusCode, response::IntoResponse, Json};
+use axum::http::StatusCode;
+use axum::Json;
+use axum::response::IntoResponse;
 use cached::proc_macro::cached;
 use reqwest::Client;
-use serde::Deserialize;
-use serde::Serialize;
-use tokio::fs::File;
-use tokio::fs::OpenOptions;
-use tokio::io::AsyncReadExt;
-use tokio::io::AsyncWriteExt;
+use serde::{Deserialize, Serialize};
+
+use crate::utils::{read_from_json_file, write_to_json_file};
 
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -27,25 +23,16 @@ pub async fn versions() -> impl IntoResponse {
     }
 }
 
-#[cached(time = 600, result = true)]
+#[cached(time = 3600, result = true)]
 pub async fn fetch_versions() -> Result<Vec<Version>> {
+    let disk_path = "data/versions.json";
     match fetch_versions_from_github().await {
-        Ok(versions) => Ok(versions),
-        Err(_) => fetch_versions_from_disk().await,
+        Ok(versions) => {
+            write_to_json_file(disk_path, &versions).await?;
+            Ok(versions)
+        },
+        Err(_) => read_from_json_file(disk_path).await,
     }
-}
-
-async fn fetch_versions_from_disk() -> Result<Vec<Version>> {
-    let mut file = File::open("data/versions.json").await
-        .context("Failed to load versions.json")?;
-
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).await
-        .context("Failed to read versions.json")?;
-    let versions: Vec<Version> = serde_json::from_slice(&buffer)
-        .context("Failed to parse versions.json")?;
-
-    Ok(versions)
 }
 
 async fn fetch_versions_from_github() -> Result<Vec<Version>> {
@@ -54,21 +41,5 @@ async fn fetch_versions_from_github() -> Result<Vec<Version>> {
     let response = client.get(url).send().await?;
     let versions: Vec<Version> = response.json().await?;
 
-    if let Err(err) = write_versions_to_disk(&versions).await {
-        eprintln!("Failed to overwrite versions file: {}", err);
-    }
-
     Ok(versions)
-}
-
-async fn write_versions_to_disk(versions: &Vec<Version>) -> io::Result<()> {
-    let data = serde_json::to_string(versions)?;
-    let mut file = OpenOptions::new()
-        .write(true)
-        .truncate(true)
-        .create(true)
-        .open("data/versions.json")
-        .await?;
-
-    file.write_all(data.as_bytes()).await
 }

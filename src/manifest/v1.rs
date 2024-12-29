@@ -1,6 +1,7 @@
 use serde::de;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::Value;
+
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Manifest {
@@ -29,6 +30,7 @@ pub struct Module {
     pub weak_dependencies: Vec<String>,
 }
 
+
 impl<'de> Deserialize<'de> for Manifest {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -39,11 +41,12 @@ impl<'de> Deserialize<'de> for Manifest {
             .as_array()
             .or_else(|| value.get("datapacks").and_then(|v| v.as_array()))
         {
-            None => Err(de::Error::custom(
-                "Expected either an array or an object with a 'datapacks' key",
-            )),
+            None => Err(de::Error::custom("Expected a 'datapacks' key or an array of datapacks")),
             Some(datapacks) => Ok(Manifest {
-                datapacks: serde_json::from_value(json!(datapacks)).map_err(de::Error::custom)?,
+                datapacks: datapacks
+                    .iter()
+                    .map(|v| serde_json::from_value(v.clone()).map_err(de::Error::custom))
+                    .collect::<Result<_, _>>()?,
             }),
         }
     }
