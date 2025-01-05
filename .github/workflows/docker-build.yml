@@ -35,7 +35,7 @@ jobs:
             IMAGE_TAG="latest"
           fi
 
-          IMAGE_NAME=ghcr.io/${{ github.repository }}:${{ env.IMAGE_TAG }}
+          IMAGE_NAME=ghcr.io/${{ github.repository }}:$IMAGE_TAG
           IMAGE_NAME_LOWER=$(echo $IMAGE_NAME | tr '[:upper:]' '[:lower:]')
           echo "IMAGE_NAME=$IMAGE_NAME_LOWER" >> $GITHUB_ENV
 
