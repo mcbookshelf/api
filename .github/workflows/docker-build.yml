@@ -9,6 +9,10 @@ on:
       - "v*"
   schedule:
     - cron: "54 3 * * *"
+
+permissions:
+  packages: write
+
 jobs:
   build:
     name: Build and Publish Docker Image to GitHub Packages
