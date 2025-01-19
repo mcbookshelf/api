@@ -8,10 +8,9 @@ FROM debian:bookworm-slim
 RUN mkdir /app && \
     apt update && \
     apt upgrade -y && \
-    apt install -y openssl git && \
-    chmod +x /app/bookshelf-api
+    apt install -y openssl git
 COPY --from=builder /usr/src/app/target/release/bookshelf-api /app/
 WORKDIR /app
 RUN git clone https://github.com/mcbookshelf/api-data.git /app/data
 EXPOSE 3000
-CMD ["./bookshelf-api"]
+CMD ["chmod +x ./bookshelf-api && ./bookshelf-api"]
