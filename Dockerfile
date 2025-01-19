@@ -11,6 +11,7 @@ RUN mkdir /app && \
     apt install -y openssl git
 COPY --from=builder /usr/src/app/target/release/bookshelf-api /app/
 WORKDIR /app
-RUN git clone https://github.com/mcbookshelf/api-data.git /app/data
+RUN chmod +x /app/bookshelf-api && \
+    git clone https://github.com/mcbookshelf/api-data.git /app/data
 EXPOSE 3000
-CMD ["chmod +x ./bookshelf-api && ./bookshelf-api"]
+CMD ["./bookshelf-api"]
