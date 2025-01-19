@@ -56,3 +56,14 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE_NAME }}
+
+      - name: Deploy to Scaleway Serverless Container
+        env:
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_CONTAINER_ID: ${{ secrets.SCW_CONTAINER_ID }}
+        run: |
+          curl -X POST \
+            -H "X-Auth-Token: $SCW_SECRET_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://api.scaleway.com/containers/v1beta1/regions/fr-par/containers/$SCW_CONTAINER_ID/deploy"
