@@ -1,7 +1,10 @@
+use std::env;
+
 use api::download::download;
 use api::manifest::manifest;
 use api::versions::versions;
-use axum::{routing::get, Router};
+use axum::{http::{HeaderValue, Method}, routing::get, Router};
+use tower_http::cors::{Any, CorsLayer};
 
 mod api;
 mod manifest;
@@ -12,8 +15,9 @@ mod utils;
 async fn main() {
     let app = Router::new()
         .route("/versions", get(versions))
-        .route("/version/:id", get(manifest))
-        .route("/download", get(download));
+        .route("/version/{id}", get(manifest))
+        .route("/download", get(download))
+        .layer(create_cors_layer().await);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
@@ -23,4 +27,15 @@ async fn main() {
         });
 
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn create_cors_layer() -> CorsLayer {
+    match env::var("BS_CORS_ALLOW_LIST") {
+        Ok(origins) => CorsLayer::new().allow_origin(origins
+            .split(',')
+            .filter_map(|origin| origin.trim().parse().ok())
+            .collect::<Vec<HeaderValue>>()
+        ),
+        Err(_) => CorsLayer::new().allow_origin(Any),
+    }.allow_methods([Method::GET])
 }
