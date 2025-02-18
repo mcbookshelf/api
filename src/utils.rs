@@ -1,5 +1,7 @@
+use std::path::Path;
+
 use anyhow::{Context, Result};
-use tokio::fs::{File, OpenOptions};
+use tokio::fs::{create_dir_all, File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 
@@ -19,6 +21,10 @@ where
 }
 
 pub async fn write_to_file(path: &str, bytes: &[u8]) -> Result<()> {
+    if let Some(dir) = Path::new(path).parent() {
+        create_dir_all(dir).await.context("Failed to create parent directory")?;
+    }
+
     let mut file = OpenOptions::new()
         .write(true)
         .truncate(true)
@@ -36,4 +42,11 @@ where
 {
     let data = serde_json::to_string(data).context("Failed to serialize data")?;
     write_to_file(path, data.as_bytes()).await
+}
+
+pub async fn write_to_new_file(path: &str, bytes: Vec<u8>) -> Result<Vec<u8>> {
+    if !Path::new(path).exists() {
+        write_to_file(path, &bytes).await?;
+    }
+    Ok(bytes)
 }

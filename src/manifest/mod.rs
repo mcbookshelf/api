@@ -34,11 +34,14 @@ impl From<v1::Manifest> for v2::Manifest {
                     icon: None,
                     banner: None,
                     readme: None,
-                    documentation: module.documentation,
+                    documentation: module.documentation.replace(
+                        "https://bookshelf.docs.gunivers.net/",
+                        "https://docs.mcbookshelf.dev/",
+                    ),
                     description: module.description,
                     kind: v2::ModuleKind::default(),
                     tags: match datapack.name.as_str() {
-                        "Bookshelf" => vec!["default".to_string()],
+                        "Bookshelf" => vec!["lib".to_string()],
                         "Bookshelf Dev" => vec!["dev".to_string()],
                         _ => vec![],
                     },

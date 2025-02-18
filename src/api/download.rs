@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use std::io::{Cursor, Write};
 use std::ops::Deref;
-use std::path::Path;
 
 use anyhow::{Context, Result};
 use axum::body::Bytes;
@@ -18,7 +17,7 @@ use zip::ZipWriter;
 
 use crate::manifest::ManifestKind;
 use crate::manifest::v2::{Module, ModuleKind};
-use crate::utils::{read_from_file, write_to_file};
+use crate::utils::{read_from_file, write_to_new_file};
 use super::manifest::fetch_manifest;
 
 
@@ -26,6 +25,17 @@ use super::manifest::fetch_manifest;
 pub struct QueryParams {
     version: String,
     modules: String,
+}
+
+#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
+struct GithubRelease {
+    assets: Vec<GithubAsset>,
+}
+
+#[derive(Deserialize, Clone, Debug, Hash, Eq, PartialEq)]
+struct GithubAsset {
+    name: String,
+    browser_download_url: String,
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -134,16 +144,21 @@ async fn fetch_module(
     version: String,
 ) -> Result<Vec<u8>> {
     let disk_path = format!("data/{}/{}.zip", version, module.id);
-    match fetch_module_from_modrinth(&module, &version).await {
-        Ok(bytes) => {
-            if !Path::new(&disk_path).exists() {
-                write_to_file(&disk_path, &bytes).await?;
-            }
-            Ok(bytes)
-        },
-        Err(_) => read_from_file(&disk_path).await
-            .context(format!("Failed to fetch module: {}", module.id)),
+
+    if let Ok(bytes) = fetch_module_from_modrinth(&module, &version).await {
+        return write_to_new_file(&disk_path, bytes).await;
     }
+
+    if let Ok(bytes) = read_from_file(&disk_path).await {
+        return Ok(bytes);
+    }
+
+    write_to_new_file(
+        &disk_path,
+        fetch_module_from_github(&module, &version)
+            .await
+            .context(format!("Failed to fetch module: {}", module.id))?
+    ).await
 }
 
 async fn fetch_module_from_modrinth(
@@ -159,6 +174,32 @@ async fn fetch_module_from_modrinth(
 
     let response = client.get(url).send().await?;
     Ok(response.bytes().await?.to_vec())
+}
+
+async fn fetch_module_from_github(
+    module: &Module,
+    version: &str,
+) -> Result<Vec<u8>> {
+    let release = fetch_release_from_github(version.to_owned()).await?;
+    let asset = release.assets
+        .iter()
+        .find(|asset| asset.name.starts_with(&module.id))
+        .context("Failed to find module asset")?;
+
+    let client = Client::new();
+    let response = client.get(&asset.browser_download_url).send().await?;
+    Ok(response.bytes().await?.to_vec())
+}
+
+#[cached(result = true)]
+async fn fetch_release_from_github(
+    version: String,
+) -> Result<GithubRelease> {
+    let client = Client::new();
+    let url = format!("https://api.github.com/repos/mcbookshelf/Bookshelf/releases/tags/v{}", version);
+
+    let response = client.get(url).header("User-Agent", "Bookshelf-API").send().await?;
+    Ok(response.json().await?)
 }
 
 async fn get_versioned_modules(
