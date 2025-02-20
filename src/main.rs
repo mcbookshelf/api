@@ -7,6 +7,7 @@ use axum::{http::{HeaderValue, Method}, routing::get, Router};
 use tower_http::cors::{Any, CorsLayer};
 
 mod api;
+mod bundle;
 mod manifest;
 mod utils;
 

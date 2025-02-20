@@ -19,26 +19,26 @@ pub struct Version {
 pub async fn versions() -> impl IntoResponse {
     match fetch_versions().await {
         Ok(data) => Json(data).into_response(),
-        Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch versions").into_response(),
     }
 }
 
-#[cached(time = 600, result = true)]
+#[cached(time = 600, result = true, sync_writes = true)]
 pub async fn fetch_versions() -> Result<Vec<Version>> {
-    let disk_path = "data/versions.json";
+    let cache_path = "cache/versions.json";
     match fetch_versions_from_github().await {
         Ok(versions) => {
-            write_to_json_file(disk_path, &versions).await?;
+            write_to_json_file(cache_path, &versions).await?;
             Ok(versions)
         },
-        Err(_) => read_from_json_file(disk_path).await,
+        Err(_) => read_from_json_file(cache_path).await,
     }
 }
 
 async fn fetch_versions_from_github() -> Result<Vec<Version>> {
     let url = "https://raw.githubusercontent.com/mcbookshelf/Bookshelf/refs/heads/master/meta/versions.json";
     let client = Client::new();
-    let response = client.get(url).send().await?;
+    let response = client.get(url).send().await?.error_for_status()?;
     let versions: Vec<Version> = response.json().await?;
 
     Ok(versions)

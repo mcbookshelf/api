@@ -43,10 +43,3 @@ where
     let data = serde_json::to_string(data).context("Failed to serialize data")?;
     write_to_file(path, data.as_bytes()).await
 }
-
-pub async fn write_to_new_file(path: &str, bytes: Vec<u8>) -> Result<Vec<u8>> {
-    if !Path::new(path).exists() {
-        write_to_file(path, &bytes).await?;
-    }
-    Ok(bytes)
-}
