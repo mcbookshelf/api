@@ -19,7 +19,10 @@ pub struct Version {
 pub async fn versions() -> impl IntoResponse {
     match fetch_versions().await {
         Ok(data) => Json(data).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch versions").into_response(),
+        Err(err) => {
+            eprintln!("{}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch versions").into_response()
+        }
     }
 }
 
@@ -36,10 +39,29 @@ pub async fn fetch_versions() -> Result<Vec<Version>> {
 }
 
 async fn fetch_versions_from_github() -> Result<Vec<Version>> {
-    let url = "https://raw.githubusercontent.com/mcbookshelf/Bookshelf/refs/heads/master/meta/versions.json";
-    let client = Client::new();
-    let response = client.get(url).send().await?.error_for_status()?;
-    let versions: Vec<Version> = response.json().await?;
+    let urls = vec![
+        "https://raw.githubusercontent.com/mcbookshelf/bookshelf/refs/heads/master/data/versions.json",
+        "https://raw.githubusercontent.com/mcbookshelf/bookshelf/refs/heads/master/meta/versions.json",
+    ];
 
-    Ok(versions)
+    let client = Client::new();
+
+    for url in urls {
+        let response = client.get(url).send().await;
+
+        match response {
+            Ok(response) if response.status().is_success() => {
+                let versions: Vec<Version> = response.json().await?;
+                return Ok(versions);
+            }
+            Ok(response) => {
+                eprintln!("Failed to fetch from {}: HTTP {}", url, response.status());
+            }
+            Err(err) => {
+                eprintln!("Error fetching from {}: {}", url, err);
+            }
+        }
+    }
+
+    Err(anyhow::anyhow!("All URLs failed to fetch the versions"))
 }

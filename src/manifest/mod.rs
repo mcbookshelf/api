@@ -41,7 +41,7 @@ impl From<v1::Manifest> for v2::Manifest {
                     description: module.description,
                     kind: v2::ModuleKind::default(),
                     tags: match datapack.name.as_str() {
-                        "Bookshelf" => vec!["lib".to_string()],
+                        "Bookshelf" => vec!["runtime".to_string()],
                         "Bookshelf Dev" => vec!["dev".to_string()],
                         _ => vec![],
                     },

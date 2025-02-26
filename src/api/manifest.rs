@@ -12,10 +12,13 @@ use super::versions::{fetch_versions, Version};
 
 
 pub async fn manifest(Path(version): Path<String>) -> impl IntoResponse {
-    match fetch_manifest(version).await {
+    match fetch_manifest(version.to_string()).await {
         Ok(Some(data)) => Json(data.into_latest()).into_response(),
         Ok(None) => (StatusCode::NOT_FOUND).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch manifest").into_response(),
+        Err(err) => {
+            eprintln!("{}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch manifest").into_response()
+        },
     }
 }
 

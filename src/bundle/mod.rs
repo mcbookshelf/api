@@ -5,7 +5,6 @@ use std::io::Write;
 
 use anyhow::Result;
 use reqwest::Client;
-use tokio::task::JoinSet;
 use zip::write::SimpleFileOptions;
 use zip::ZipArchive;
 use zip::ZipWriter;
@@ -92,18 +91,12 @@ async fn create_pack(
     kind: ModuleKind,
 ) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
-    let mut writer = ZipWriter::new(Cursor::new(&mut buffer));
     let mut duplicates = HashSet::new();
-
+    let mut writer = ZipWriter::new(Cursor::new(&mut buffer));
     let options = SimpleFileOptions::default();
-    let mut tasks = JoinSet::new();
-    for module in modules {
-        let client = client.clone();
-        tasks.spawn(async move { fetch_module(client, module, kind).await });
-    }
 
-    while let Some(result) = tasks.join_next().await {
-        let data = result??;
+    for module in modules {
+        let data = fetch_module(client.clone(), module, kind).await?;
         let mut archive = ZipArchive::new(Cursor::new(data))?;
 
         for i in 0..archive.len() {

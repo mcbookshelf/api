@@ -37,10 +37,13 @@ pub async fn download(Query(params): Query<QueryParams>) -> impl IntoResponse {
                 StatusCode::BAD_REQUEST,
                 format!("Version `{}` not found.", version),
             ).into_response(),
-            Err(_) => return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to retrieve manifest for version `{}`.", version),
-            ).into_response(),
+            Err(err) => {
+                eprintln!("{}", err);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to retrieve manifest for version `{}`.", version),
+                ).into_response()
+            },
         };
 
         for module_id in module_ids {
@@ -68,6 +71,9 @@ pub async fn download(Query(params): Query<QueryParams>) -> impl IntoResponse {
             ];
             (StatusCode::OK, headers, Bytes::from(data)).into_response()
         }
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create the bundle.").into_response(),
+        Err(err) => {
+            eprintln!("{}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create the bundle.").into_response()
+        },
     }
 }
