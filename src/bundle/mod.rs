@@ -4,6 +4,7 @@ use std::io::Cursor;
 use std::io::Write;
 
 use anyhow::Result;
+use futures::stream::{FuturesUnordered, StreamExt};
 use reqwest::Client;
 use zip::write::SimpleFileOptions;
 use zip::ZipArchive;
@@ -95,8 +96,13 @@ async fn create_pack(
     let mut writer = ZipWriter::new(Cursor::new(&mut buffer));
     let options = SimpleFileOptions::default();
 
-    for module in modules {
-        let data = fetch_module(client.clone(), module, kind).await?;
+    let mut tasks = modules.into_iter().map(|module| {
+        let client = client.clone();
+        async move { fetch_module(client, module, kind).await }
+    }).collect::<FuturesUnordered<_>>();
+
+    while let Some(result) = tasks.next().await {
+        let data = result?;
         let mut archive = ZipArchive::new(Cursor::new(data))?;
 
         for i in 0..archive.len() {

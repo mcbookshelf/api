@@ -1,14 +1,15 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct Manifest {
     pub modules: Vec<Module>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, Hash, Eq, PartialEq, ToSchema)]
 pub struct Module {
     pub id: String,
     pub name: String,
@@ -28,7 +29,7 @@ pub struct Module {
     pub weak_dependencies: Vec<String>,
 }
 
-#[derive(Copy, Clone, Debug, Default, Deserialize, Serialize, Hash, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Default, Deserialize, Serialize, Hash, Eq, PartialEq, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ModuleKind {
     #[default]

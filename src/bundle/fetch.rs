@@ -1,9 +1,9 @@
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use cached::proc_macro::cached;
 use dashmap::DashMap;
-use lazy_static::lazy_static;
 use reqwest::Client;
 use serde::Deserialize;
 
@@ -11,11 +11,9 @@ use crate::bundle::VersionedModule;
 use crate::manifest::v2::ModuleKind;
 use crate::utils::{read_from_file, write_to_file};
 
-lazy_static! {
-    static ref FETCH_MODULE_LAST: DashMap<String, Instant> = DashMap::new();
-}
 
 const FETCH_MODULE_COOLDOWN: Duration = Duration::from_secs(600);
+static FETCH_MODULE_LAST: OnceLock<DashMap<String, Instant>> = OnceLock::new();
 
 
 #[derive(Clone, Debug, Deserialize)]
@@ -51,14 +49,13 @@ pub async fn fetch_module(
     let cache_path = format!("cache/{}/{}.zip", module.version, module.id);
     if let Ok(bytes) = read_from_file(&cache_path).await {
         let now = Instant::now();
-        if FETCH_MODULE_LAST.get(&cache_path).map_or(
-            true,
+        if FETCH_MODULE_LAST.get_or_init(DashMap::new).get(&cache_path).is_none_or(
             |last| now.duration_since(*last.value()) > FETCH_MODULE_COOLDOWN
         ) {
             tokio::spawn(async move {
                 if let Ok(url) = fetch_module_url_from_modrinth(&client, &module, &kind).await {
                     let _ = client.get(url).send().await;
-                    FETCH_MODULE_LAST.insert(cache_path, now);
+                    FETCH_MODULE_LAST.get_or_init(DashMap::new).insert(cache_path, now);
                 }
             });
         }
@@ -93,7 +90,7 @@ async fn fetch_module_from_sources(
 
 #[cached(
     result = true,
-    sync_writes = true,
+    sync_writes = "by_key",
     convert = r#"{ format!("{}:{}", module, kind) }"#,
     key = "String",
 )]
@@ -124,7 +121,7 @@ async fn fetch_module_url_from_modrinth(
 
 #[cached(
     result = true,
-    sync_writes = true,
+    sync_writes = "by_key",
     convert = r#"{ format!("{}:{}", module, kind) }"#,
     key = "String",
 )]
@@ -150,7 +147,7 @@ async fn fetch_module_url_from_github(
 
 #[cached(
     result = true,
-    sync_writes = true,
+    sync_writes = "by_key",
     convert = r#"{ version.to_string() }"#,
     key = "String",
 )]

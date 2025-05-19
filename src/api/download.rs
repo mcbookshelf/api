@@ -16,7 +16,21 @@ pub struct QueryParams {
     modules: String,
 }
 
-
+#[utoipa::path(
+    get,
+    tag = "modules",
+    summary = "Download modules",
+    description = "Create and download a bundled archive containing one or more specified modules.",
+    path = "/download",
+    params(
+        ("version" = String, Query, description = "Bookshelf version to use", example = "2.2.2"),
+        ("modules" = String, Query, description = "Comma-separated list of modules", example = "bs.block,bs.raycast")
+    ),
+    responses(
+        (status = 200, description = "Zip bundle created successfully", content_type = "application/zip"),
+        (status = 400, description = "Bad request, missing or invalid params"),
+    )
+)]
 pub async fn download(Query(params): Query<QueryParams>) -> impl IntoResponse {
     if params.version.is_empty() || params.modules.is_empty() {
         return (StatusCode::BAD_REQUEST, "Version and modules cannot be empty.").into_response();
