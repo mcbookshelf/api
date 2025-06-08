@@ -4,6 +4,7 @@ use api::download::download;
 use api::manifest::manifest;
 use api::versions::versions;
 use axum::{http::{HeaderValue, Method}, routing::get, Router};
+use tower_http::compression::CompressionLayer;
 use tower_http::cors::{Any, CorsLayer};
 use utoipa::OpenApi;
 use utoipa_rapidoc::RapiDoc;
@@ -63,7 +64,8 @@ async fn main() {
         .route("/versions", get(versions))
         .route("/version/{id}", get(manifest))
         .route("/download", get(download))
-        .layer(create_cors_layer().await);
+        .layer(create_cors_layer().await)
+        .layer(CompressionLayer::new());
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
