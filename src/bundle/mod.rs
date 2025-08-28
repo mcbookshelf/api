@@ -50,20 +50,16 @@ pub async fn create_bundle(modules: Vec<VersionedModule>) -> Result<Vec<u8>> {
     for module in modules {
         match module.kind {
             ModuleKind::DataPack => data_packs.push(module),
-            ModuleKind::ResourcePack => resource_packs.push(module),
-            ModuleKind::Combined => {
-                data_packs.push(module.clone());
-                resource_packs.push(module);
-            }
+            ModuleKind::ResourcePack => resource_packs.push(module)
         }
     }
 
     if !data_packs.is_empty() && !resource_packs.is_empty() {
         create_packs(&client, data_packs, resource_packs).await
     } else if !data_packs.is_empty() {
-        create_pack(&client, data_packs, ModuleKind::DataPack).await
+        create_pack(&client, data_packs).await
     } else {
-        create_pack(&client, resource_packs, ModuleKind::ResourcePack).await
+        create_pack(&client, resource_packs).await
     }
 }
 
@@ -77,9 +73,9 @@ async fn create_packs(
     let mut zip_writer = ZipWriter::new(Cursor::new(&mut buffer));
     let options = SimpleFileOptions::default();
     zip_writer.start_file("data_packs.zip", options)?;
-    zip_writer.write_all(&create_pack(client, data_packs, ModuleKind::DataPack).await?)?;
+    zip_writer.write_all(&create_pack(client, data_packs).await?)?;
     zip_writer.start_file("resource_packs.zip", options)?;
-    zip_writer.write_all(&create_pack(client, resource_packs, ModuleKind::ResourcePack).await?)?;
+    zip_writer.write_all(&create_pack(client, resource_packs).await?)?;
     zip_writer.finish()?;
 
     Ok(buffer)
@@ -89,16 +85,17 @@ async fn create_packs(
 async fn create_pack(
     client: &Client,
     modules: Vec<VersionedModule>,
-    kind: ModuleKind,
 ) -> Result<Vec<u8>> {
     let mut buffer = Vec::new();
-    let mut duplicates = HashSet::new();
-    let mut writer = ZipWriter::new(Cursor::new(&mut buffer));
+    let cursor = Cursor::new(&mut buffer);
+
     let options = SimpleFileOptions::default();
+    let mut writer = ZipWriter::new(cursor);
+    let mut seen = HashSet::new();
 
     let mut tasks = modules.into_iter().map(|module| {
         let client = client.clone();
-        async move { fetch_module(client, module, kind).await }
+        async move { fetch_module(client, module).await }
     }).collect::<FuturesUnordered<_>>();
 
     while let Some(result) = tasks.next().await {
@@ -107,9 +104,10 @@ async fn create_pack(
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i)?;
+            let name = file.name().to_string();
 
-            if duplicates.insert(file.name().to_string()) {
-                writer.start_file(file.name(), options)?;
+            if seen.insert(name.clone()) {
+                writer.start_file(name, options)?;
                 std::io::copy(&mut file, &mut writer)?;
             }
         }
