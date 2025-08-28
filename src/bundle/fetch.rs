@@ -7,13 +7,15 @@ use dashmap::DashMap;
 use reqwest::Client;
 use serde::Deserialize;
 use tokio::sync::Semaphore;
+use tokio::time::timeout;
 
 use crate::bundle::VersionedModule;
 use crate::utils::{read_from_file, write_to_file};
 
 const FETCH_MODULE_COOLDOWN: Duration = Duration::from_secs(600);
+
 static FETCH_MODULE_LAST: OnceLock<DashMap<String, Instant>> = OnceLock::new();
-static SEM: OnceLock<Arc<Semaphore>> = OnceLock::new();
+static SEMAPHORE: OnceLock<Arc<Semaphore>> = OnceLock::new();
 
 
 #[derive(Clone, Debug, Deserialize)]
@@ -47,16 +49,22 @@ pub async fn fetch_module(
     let cache_path = format!("cache/{}/{}.zip", module.version, module.id);
     if let Ok(bytes) = read_from_file(&cache_path).await {
         let now = Instant::now();
-        if FETCH_MODULE_LAST.get_or_init(DashMap::new).get(&cache_path).is_none_or(
-            |last| now.duration_since(*last.value()) > FETCH_MODULE_COOLDOWN
-        ) {
-            let sem = SEM.get_or_init(|| Arc::new(Semaphore::new(3))).clone();
+        let map = FETCH_MODULE_LAST.get_or_init(DashMap::new);
+
+        if map.get(&cache_path).is_none_or(|last| now.duration_since(*last.value()) > FETCH_MODULE_COOLDOWN) {
+            let sem = SEMAPHORE.get_or_init(|| Arc::new(Semaphore::new(3))).clone();
+            map.insert(cache_path.clone(), now);
 
             tokio::spawn(async move {
-                let _permit = sem.acquire().await.unwrap();
-                if let Ok(url) = fetch_module_url_from_modrinth(&client, &module).await {
-                    let _ = client.get(url).send().await;
-                    FETCH_MODULE_LAST.get_or_init(DashMap::new).insert(cache_path, now);
+                if let Ok(_permit) = sem.acquire().await {
+                    let url = match fetch_module_url_from_modrinth(&client, &module).await {
+                        Ok(url) => url,
+                        Err(_) => return,
+                    };
+
+                    if let Ok(Ok(resp)) = timeout(Duration::from_secs(5), client.get(url).send()).await {
+                        let _ = resp.bytes().await;
+                    }
                 }
             });
         }
