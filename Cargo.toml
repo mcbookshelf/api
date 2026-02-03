@@ -9,7 +9,7 @@ license = "MPL-2.0"
 [dependencies]
 anyhow = "1.0.99"
 axum = "0.8.4"
-bytes = "1.10.1"
+bytes = "1.11.1"
 cached = { version = "0.56.0", features = ["async"] }
 dashmap = "6.1.0"
 futures = "0.3.31"
